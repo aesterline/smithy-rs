@@ -14,7 +14,7 @@ pub type OutputOrError = Result<Output, Error>;
 /// A container for the data currently available to an interceptor.
 pub struct InterceptorContext<Request, Response> {
     input: Option<Input>,
-    output_or_error: Option<OutputOrError>,
+    output_or_error: Option<Option<OutputOrError>>,
     request: Option<Request>,
     response: Option<Response>,
 }

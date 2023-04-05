@@ -13,11 +13,6 @@ pub mod interceptors;
 
 pub mod orchestrator;
 
-/// Smithy code related to retry handling and token bucket.
-///
-/// This code defines when and how failed requests should be retried. It also defines the behavior
-/// used to limit the rate that requests are sent.
-pub mod retries;
 /// Runtime plugin type definitions.
 pub mod runtime_plugin;
 
@@ -26,3 +21,6 @@ pub mod endpoints;
 
 /// Smithy auth runtime plugins
 pub mod auth;
+
+/// Smithy retry traits and common behavior
+mod retries;

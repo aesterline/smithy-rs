@@ -4,31 +4,27 @@
  */
 
 use crate::client::interceptors::InterceptorContext;
-use crate::client::orchestrator::{BoxError, RetryStrategy};
+use crate::client::orchestrator::{BoxError, HttpRequest, HttpResponse};
 use crate::config_bag::ConfigBag;
-use aws_smithy_http::body::SdkBody;
+use std::fmt::Debug;
+use std::time::Duration;
 
-pub mod rate_limiting;
-
-#[derive(Debug, Clone)]
-pub struct NeverRetryStrategy {}
-
-impl NeverRetryStrategy {
-    pub fn new() -> Self {
-        Self {}
-    }
+/// An answer to the question "should I make a request attempt?"
+pub enum ShouldAttempt {
+    Yes,
+    No,
+    YesAfterDelay(Duration),
 }
 
-impl RetryStrategy for NeverRetryStrategy {
-    fn should_attempt_initial_request(&self, _cfg: &ConfigBag) -> Result<(), BoxError> {
-        Ok(())
-    }
+pub trait RetryStrategy: Send + Sync + Debug {
+    fn should_attempt_initial_request(
+        &self,
+        cfg: &mut ConfigBag,
+    ) -> Result<ShouldAttempt, BoxError>;
 
     fn should_attempt_retry(
         &self,
-        _context: &InterceptorContext<http::Request<SdkBody>, http::Response<SdkBody>>,
-        _cfg: &ConfigBag,
-    ) -> Result<bool, BoxError> {
-        Ok(false)
-    }
+        context: &InterceptorContext<HttpRequest, HttpResponse>,
+        cfg: &mut ConfigBag,
+    ) -> Result<ShouldAttempt, BoxError>;
 }
