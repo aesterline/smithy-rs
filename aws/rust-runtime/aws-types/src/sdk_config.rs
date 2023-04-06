@@ -561,22 +561,22 @@ impl SdkConfig {
 
     /// Configured credentials cache
     pub fn credentials_cache(&self) -> Option<&CredentialsCache> {
-        todo!()
+        self.inner.load::<CredentialsCache>()
     }
 
     /// Configured credentials provider
     pub fn credentials_provider(&self) -> Option<&SharedCredentialsProvider> {
-        todo!()
+        self.inner.load::<SharedCredentialsProvider>()
     }
 
     /// Configured app name
     pub fn app_name(&self) -> Option<&AppName> {
-        todo!()
+        self.inner.load::<AppName>()
     }
 
     /// Configured HTTP Connector
     pub fn http_connector(&self) -> Option<&HttpConnector> {
-        todo!()
+        self.inner.load::<HttpConnector>()
     }
 
     /// Use FIPS endpoints
