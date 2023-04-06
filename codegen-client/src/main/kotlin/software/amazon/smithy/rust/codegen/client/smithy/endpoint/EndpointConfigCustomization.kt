@@ -98,7 +98,7 @@ internal class EndpointConfigCustomization(
                         /// Sets the endpoint resolver to use when making requests.
                         $defaultResolverDocs
                         pub fn endpoint_resolver(mut self, endpoint_resolver: impl $resolverTrait + 'static) -> Self {
-                            self.endpoint_resolver = Some(std::sync::Arc::new(endpoint_resolver) as _);
+                            self.set_endpoint_resolver(Some(std::sync::Arc::new(endpoint_resolver) as _));
                             self
                         }
 
@@ -117,17 +117,7 @@ internal class EndpointConfigCustomization(
 
                 ServiceConfig.BuilderBuild -> {
                     val defaultResolver = typesGenerator.defaultResolver()
-                    if (defaultResolver != null) {
-                        rustTemplate(
-                            """
-                            endpoint_resolver: self.endpoint_resolver.unwrap_or_else(||
-                                std::sync::Arc::new(#{DefaultResolver}::new())
-                            ),
-                            """,
-                            *codegenScope,
-                            "DefaultResolver" to defaultResolver,
-                        )
-                    } else {
+                    if (defaultResolver == null) {
                         val alwaysFailsResolver =
                             RuntimeType.forInlineFun("MissingResolver", ClientRustModule.Endpoint) {
                                 rustTemplate(
@@ -144,14 +134,6 @@ internal class EndpointConfigCustomization(
                                     "Result" to types.smithyHttpEndpointModule.resolve("Result"),
                                 )
                             }
-                        // To keep this diff under control, rather than `.expect` here, insert a resolver that will
-                        // always fail. In the future, this will be changed to an `expect()`
-                        rustTemplate(
-                            """
-                            endpoint_resolver: self.endpoint_resolver.unwrap_or_else(||std::sync::Arc::new(#{FailingResolver})),
-                            """,
-                            "FailingResolver" to alwaysFailsResolver,
-                        )
                     }
                 }
 

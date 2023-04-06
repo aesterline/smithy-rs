@@ -62,8 +62,6 @@ class CredentialProviderConfig(runtimeConfig: RuntimeConfig) : ConfigCustomizati
 
     override fun section(section: ServiceConfig) = writable {
         when (section) {
-            ServiceConfig.BuilderStruct ->
-                rustTemplate("credentials_provider: Option<#{provider}::SharedCredentialsProvider>,", *codegenScope)
             ServiceConfig.BuilderImpl -> {
                 rustTemplate(
                     """
@@ -75,7 +73,7 @@ class CredentialProviderConfig(runtimeConfig: RuntimeConfig) : ConfigCustomizati
 
                     /// Sets the credentials provider for this service
                     pub fn set_credentials_provider(&mut self, credentials_provider: Option<#{provider}::SharedCredentialsProvider>) -> &mut Self {
-                        self.credentials_provider = credentials_provider;
+                        self.config_bag.store_or_unset(credentials_provider);
                         self
                     }
                     """,

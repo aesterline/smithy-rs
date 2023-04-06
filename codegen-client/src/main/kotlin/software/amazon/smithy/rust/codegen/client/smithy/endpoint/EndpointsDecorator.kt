@@ -206,7 +206,7 @@ class EndpointsDecorator : ClientCodegenDecorator {
         }
 
         private fun builderFields(params: Parameters, section: OperationSection.MutateInput) = writable {
-            val memberParams = idx.getContextParams(operationShape)
+            val memberParams = idx.getContextParams(operationShape).toList().sortedBy { it.first.memberName }
             val builtInParams = params.toList().filter { it.isBuiltIn }
             // first load builtins and their defaults
             builtInParams.forEach { param ->
@@ -219,9 +219,9 @@ class EndpointsDecorator : ClientCodegenDecorator {
                 val paramName = EndpointParamsGenerator.memberName(name)
                 val setterName = EndpointParamsGenerator.setterName(name)
                 if (param.type == ShapeType.BOOLEAN) {
-                    rust(".$setterName(${section.config}.$paramName)")
+                    rust(".$setterName(${section.config}.$paramName())")
                 } else {
-                    rust(".$setterName(${section.config}.$paramName.clone())")
+                    rust(".$setterName(${section.config}.$paramName().clone())")
                 }
             }
 

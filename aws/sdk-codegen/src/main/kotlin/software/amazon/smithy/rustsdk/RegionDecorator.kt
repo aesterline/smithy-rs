@@ -159,19 +159,15 @@ class RegionProviderConfig(codegenContext: CodegenContext) : ConfigCustomization
     private val codegenScope = arrayOf("Region" to region.resolve("Region"))
     override fun section(section: ServiceConfig) = writable {
         when (section) {
-            ServiceConfig.ConfigStruct -> rustTemplate("pub(crate) region: Option<#{Region}>,", *codegenScope)
             ServiceConfig.ConfigImpl -> rustTemplate(
                 """
                 /// Returns the AWS region, if it was provided.
                 pub fn region(&self) -> Option<&#{Region}> {
-                    self.region.as_ref()
+                    self.inner.load::<#{Region}>()
                 }
                 """,
                 *codegenScope,
             )
-
-            ServiceConfig.BuilderStruct ->
-                rustTemplate("region: Option<#{Region}>,", *codegenScope)
 
             ServiceConfig.BuilderImpl ->
                 rustTemplate(
@@ -188,17 +184,12 @@ class RegionProviderConfig(codegenContext: CodegenContext) : ConfigCustomization
                     ///     .build();
                     /// ```
                     pub fn region(mut self, region: impl Into<Option<#{Region}>>) -> Self {
-                        self.region = region.into();
+                        self.config_bag.store_or_unset(region.into());
                         self
                     }
                     """,
                     *codegenScope,
                 )
-
-            ServiceConfig.BuilderBuild -> rustTemplate(
-                """region: self.region,""",
-                *codegenScope,
-            )
 
             else -> emptySection
         }

@@ -31,46 +31,27 @@ class ResiliencyConfigCustomization(codegenContext: CodegenContext) : ConfigCust
     override fun section(section: ServiceConfig) =
         writable {
             when (section) {
-                is ServiceConfig.ConfigStruct -> rustTemplate(
-                    """
-                    retry_config: Option<#{RetryConfig}>,
-                    sleep_impl: Option<std::sync::Arc<dyn #{AsyncSleep}>>,
-                    timeout_config: Option<#{TimeoutConfig}>,
-                    """,
-                    *codegenScope,
-                )
-
                 is ServiceConfig.ConfigImpl -> {
                     rustTemplate(
                         """
                         /// Return a reference to the retry configuration contained in this config, if any.
                         pub fn retry_config(&self) -> Option<&#{RetryConfig}> {
-                            self.retry_config.as_ref()
+                            self.config_bag.load::<RetryConfigStorable>().map(|r| &r.0)
                         }
 
                         /// Return a cloned Arc containing the async sleep implementation from this config, if any.
                         pub fn sleep_impl(&self) -> Option<std::sync::Arc<dyn #{AsyncSleep}>> {
-                            self.sleep_impl.clone()
+                            aws_smithy_async::AsyncConfiguration::from_bag(&self.config_bag).async_sleep()
                         }
 
-                        /// Return a reference to the timeout configuration contained in this config, if any.
-                        pub fn timeout_config(&self) -> Option<&#{TimeoutConfig}> {
-                            self.timeout_config.as_ref()
+                        /// Return the timeout configuration contained in this config, if any.
+                        pub fn timeout_config(&self) -> Option<#{TimeoutConfig}> {
+                            Some(self.config_bag.load::<TimeoutConfigStorable>().0.build())
                         }
                         """,
                         *codegenScope,
                     )
                 }
-
-                is ServiceConfig.BuilderStruct ->
-                    rustTemplate(
-                        """
-                        retry_config: Option<#{RetryConfig}>,
-                        sleep_impl: Option<std::sync::Arc<dyn #{AsyncSleep}>>,
-                        timeout_config: Option<#{TimeoutConfig}>,
-                        """,
-                        *codegenScope,
-                    )
 
                 ServiceConfig.BuilderImpl ->
                     rustTemplate(
@@ -107,7 +88,8 @@ class ResiliencyConfigCustomization(codegenContext: CodegenContext) : ConfigCust
                         /// let config = builder.build();
                         /// ```
                         pub fn set_retry_config(&mut self, retry_config: Option<#{RetryConfig}>) -> &mut Self {
-                            self.retry_config = retry_config;
+                            self.config_bag
+                                .store_or_unset(retry_config.map(RetryConfigStorable));
                             self
                         }
 
@@ -161,7 +143,7 @@ class ResiliencyConfigCustomization(codegenContext: CodegenContext) : ConfigCust
                         /// let config = builder.build();
                         /// ```
                         pub fn set_sleep_impl(&mut self, sleep_impl: Option<std::sync::Arc<dyn #{AsyncSleep}>>) -> &mut Self {
-                            self.sleep_impl = sleep_impl;
+                            AsyncConfigurationBuilder::from_bag(&mut self.config_bag).set_sleep_impl(sleep_impl);
                             self
                         }
 
@@ -205,28 +187,13 @@ class ResiliencyConfigCustomization(codegenContext: CodegenContext) : ConfigCust
                         /// let config = builder.build();
                         /// ```
                         pub fn set_timeout_config(&mut self, timeout_config: Option<#{TimeoutConfig}>) -> &mut Self {
-                            self.timeout_config = timeout_config;
+                            self.config_bag
+                                .store_or_unset(timeout_config.map(|c| TimeoutConfigStorable(c.to_builder())));
                             self
                         }
                         """,
                         *codegenScope,
                     )
-
-                ServiceConfig.BuilderBuild -> rustTemplate(
-                    // We call clone on sleep_impl because the field is used by
-                    // initializing the credentials_cache field later in the build
-                    // method of a Config builder.
-                    // We could rearrange the order of decorators so that AwsCodegenDecorator
-                    // runs before RequiredCustomizations, which in turns renders
-                    // CredentialsCacheDecorator before this class, but that is a bigger
-                    // change than adding a call to the clone method on sleep_impl.
-                    """
-                    retry_config: self.retry_config,
-                    sleep_impl: self.sleep_impl.clone(),
-                    timeout_config: self.timeout_config,
-                    """,
-                    *codegenScope,
-                )
 
                 else -> emptySection
             }

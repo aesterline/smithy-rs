@@ -14,16 +14,16 @@ class ConfigBagBackedConfiguration(private val runtimeConfig: RuntimeConfig) : C
     override fun section(section: ServiceConfig) = writable {
         when (section) {
             ServiceConfig.BuilderStruct -> {
-                rust("config_bag: #T", RuntimeType.configBag(runtimeConfig))
+                rust("config_bag: #T,", RuntimeType.configBag(runtimeConfig))
             }
 
             ServiceConfig.BuilderBuild -> {
-                rust("config_bag: self.config_bag.freeze()")
+                rust("config_bag: self.config_bag.freeze(),")
             }
 
             ServiceConfig.ConfigStruct ->
                 rust(
-                    "config_bag: #T",
+                    "config_bag: #T,",
                     RuntimeType.frozenConfigBag(runtimeConfig),
                 )
 

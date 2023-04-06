@@ -10,7 +10,6 @@ import software.amazon.smithy.rust.codegen.client.smithy.customize.ClientCodegen
 import software.amazon.smithy.rust.codegen.client.smithy.generators.config.ConfigCustomization
 import software.amazon.smithy.rust.codegen.client.smithy.generators.config.ServiceConfig
 import software.amazon.smithy.rust.codegen.core.rustlang.Writable
-import software.amazon.smithy.rust.codegen.core.rustlang.rust
 import software.amazon.smithy.rust.codegen.core.rustlang.rustTemplate
 import software.amazon.smithy.rust.codegen.core.rustlang.writable
 import software.amazon.smithy.rust.codegen.core.smithy.CodegenContext
@@ -39,9 +38,6 @@ class HttpConnectorConfigCustomization(
 
     override fun section(section: ServiceConfig): Writable {
         return when (section) {
-            is ServiceConfig.ConfigStruct -> writable {
-                rustTemplate("http_connector: Option<#{HttpConnector}>,", *codegenScope)
-            }
             is ServiceConfig.ConfigImpl -> writable {
                 rustTemplate(
                     """
@@ -52,9 +48,6 @@ class HttpConnectorConfigCustomization(
                     """,
                     *codegenScope,
                 )
-            }
-            is ServiceConfig.BuilderStruct -> writable {
-                rustTemplate("http_connector: Option<#{HttpConnector}>,", *codegenScope)
             }
             ServiceConfig.BuilderImpl -> writable {
                 rustTemplate(
@@ -91,7 +84,7 @@ class HttpConnectorConfigCustomization(
                     /// ## }
                     /// ```
                     pub fn http_connector(mut self, http_connector: impl Into<#{HttpConnector}>) -> Self {
-                        self.http_connector = Some(http_connector.into());
+                        self.set_http_connector(Some(http_connector.into()));
                         self
                     }
 
@@ -141,9 +134,7 @@ class HttpConnectorConfigCustomization(
                     *codegenScope,
                 )
             }
-            is ServiceConfig.BuilderBuild -> writable {
-                rust("http_connector: self.http_connector,")
-            }
+
             else -> emptySection
         }
     }

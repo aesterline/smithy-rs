@@ -122,10 +122,6 @@ class UserAgentDecorator : ClientCodegenDecorator {
 
         override fun section(section: ServiceConfig): Writable =
             when (section) {
-                is ServiceConfig.BuilderStruct -> writable {
-                    rustTemplate("app_name: Option<#{AppName}>,", *codegenScope)
-                }
-
                 is ServiceConfig.BuilderImpl -> writable {
                     rustTemplate(
                         """
@@ -143,20 +139,12 @@ class UserAgentDecorator : ClientCodegenDecorator {
                         /// This _optional_ name is used to identify the application in the user agent that
                         /// gets sent along with requests.
                         pub fn set_app_name(&mut self, app_name: Option<#{AppName}>) -> &mut Self {
-                            self.app_name = app_name;
+                            self.bag.store_or_unset(app_name);
                             self
                         }
                         """,
                         *codegenScope,
                     )
-                }
-
-                is ServiceConfig.BuilderBuild -> writable {
-                    rust("app_name: self.app_name,")
-                }
-
-                is ServiceConfig.ConfigStruct -> writable {
-                    rustTemplate("app_name: Option<#{AppName}>,", *codegenScope)
                 }
 
                 is ServiceConfig.ConfigImpl -> writable {
@@ -167,7 +155,7 @@ class UserAgentDecorator : ClientCodegenDecorator {
                         /// This _optional_ name is used to identify the application in the user agent that
                         /// gets sent along with requests.
                         pub fn app_name(&self) -> Option<&#{AppName}> {
-                            self.app_name.as_ref()
+                            self.inner.load::<#{AppName}>()
                         }
                         """,
                         *codegenScope,

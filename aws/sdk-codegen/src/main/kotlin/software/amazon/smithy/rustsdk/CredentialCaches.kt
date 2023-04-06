@@ -58,23 +58,15 @@ class CredentialCacheConfig(runtimeConfig: RuntimeConfig) : ConfigCustomization(
 
     override fun section(section: ServiceConfig) = writable {
         when (section) {
-            ServiceConfig.ConfigStruct -> rustTemplate(
-                """pub(crate) credentials_cache: #{cache}::SharedCredentialsCache,""",
-                *codegenScope,
-            )
-
             ServiceConfig.ConfigImpl -> rustTemplate(
                 """
                 /// Returns the credentials cache.
                 pub fn credentials_cache(&self) -> #{cache}::SharedCredentialsCache {
-                    self.credentials_cache.clone()
+                    self.config_bag.load::<#{cache}::SharedCredentialsCache>().clone()
                 }
                 """,
                 *codegenScope,
             )
-
-            ServiceConfig.BuilderStruct ->
-                rustTemplate("credentials_cache: Option<#{cache}::CredentialsCache>,", *codegenScope)
 
             ServiceConfig.BuilderImpl -> {
                 rustTemplate(
@@ -87,37 +79,13 @@ class CredentialCacheConfig(runtimeConfig: RuntimeConfig) : ConfigCustomization(
 
                     /// Sets the credentials cache for this service
                     pub fn set_credentials_cache(&mut self, credentials_cache: Option<#{cache}::CredentialsCache>) -> &mut Self {
-                        self.credentials_cache = credentials_cache;
+                        self.config_bag.store_or_unset(credentials_cache);
                         self
                     }
                     """,
                     *codegenScope,
                 )
             }
-
-            ServiceConfig.BuilderBuild -> rustTemplate(
-                """
-                credentials_cache: self
-                    .credentials_cache
-                    .unwrap_or_else({
-                        let sleep = self.sleep_impl.clone();
-                        || match sleep {
-                            Some(sleep) => {
-                                #{cache}::CredentialsCache::lazy_builder()
-                                    .sleep(sleep)
-                                    .into_credentials_cache()
-                            }
-                            None => #{cache}::CredentialsCache::lazy(),
-                        }
-                    })
-                    .create_cache(
-                        self.credentials_provider.unwrap_or_else(|| {
-                            #{provider}::SharedCredentialsProvider::new(#{DefaultProvider})
-                        })
-                    ),
-                """,
-                *codegenScope,
-            )
 
             else -> emptySection
         }

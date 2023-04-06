@@ -106,17 +106,21 @@ data class ConfigParam(val name: String, val type: Symbol, val setterDocs: Writa
 fun standardConfigParam(param: ConfigParam): ConfigCustomization = object : ConfigCustomization() {
     override fun section(section: ServiceConfig): Writable {
         return when (section) {
-            is ServiceConfig.ConfigStruct -> emptySection
-
-            ServiceConfig.ConfigImpl -> emptySection
-            ServiceConfig.BuilderStruct -> emptySection
-
-            ServiceConfig.BuilderImpl -> writable {
+            is ServiceConfig.ConfigImpl -> writable {
+                rust(
+                    """
+                    pub fn ${param.name}(&self) -> Option<${param.type}> {
+                        self.config_bag.load::<${param.type}>()
+                    }
+                    """,
+                )
+            }
+            is ServiceConfig.BuilderImpl -> writable {
                 docsOrFallback(param.setterDocs)
                 rust(
                     """
                     pub fn ${param.name}(mut self, ${param.name}: impl Into<#T>) -> Self {
-                        self.bag.store(${param.name}.into());
+                        self.set_${param.name}(Some(${param.name}));
                         self
                         }""",
                     param.type,
@@ -126,16 +130,12 @@ fun standardConfigParam(param: ConfigParam): ConfigCustomization = object : Conf
                 rust(
                     """
                     pub fn set_${param.name}(&mut self, ${param.name}: Option<#T>) -> &mut Self {
-                        self.${param.name} = ${param.name};
+                        self.config_bag.store(${param.name}.into());
                         self
                     }
                     """,
                     param.type,
                 )
-            }
-
-            ServiceConfig.BuilderBuild -> writable {
-                rust("${param.name}: self.${param.name},")
             }
 
             else -> emptySection
